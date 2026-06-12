@@ -88,7 +88,26 @@ router.post('/:id/equipments', requireRole('ADMIN', 'MANAGER'), wrap(async (req,
   if (!(await store.getProject(id))) return sendError(res, 404, '人防工程不存在');
   const b = req.body || {};
   if (!isNonEmptyString(b.name)) return sendError(res, 400, '设备名称不能为空');
-  const e = await store.createEquipment({ ...b, projectId: id, name: b.name.trim() });
+  const VALID_EQ_STATUSES = ['NORMAL', 'FAULT', 'MAINTENANCE', 'SCRAPPED'];
+  const VALID_CATEGORIES = ['PROTECTIVE_DOOR', 'VENTILATION', 'POWER', 'WATER', 'OTHER'];
+  if (b.status !== undefined && !VALID_EQ_STATUSES.includes(b.status)) {
+    return sendError(res, 400, '无效的设备状态');
+  }
+  if (b.category !== undefined && !VALID_CATEGORIES.includes(b.category)) {
+    return sendError(res, 400, '无效的设备类别');
+  }
+  if (b.designLifeYears !== undefined && (!Number.isInteger(Number(b.designLifeYears)) || Number(b.designLifeYears) <= 0)) {
+    return sendError(res, 400, '设计使用年限必须是正整数');
+  }
+  if (b.maintainCycleDays !== undefined && (!Number.isInteger(Number(b.maintainCycleDays)) || Number(b.maintainCycleDays) <= 0)) {
+    return sendError(res, 400, '维护周期必须是正整数天数');
+  }
+  const e = await store.createEquipment({
+    ...b, projectId: id,
+    name: b.name.trim(),
+    designLifeYears: b.designLifeYears ? Number(b.designLifeYears) : undefined,
+    maintainCycleDays: b.maintainCycleDays ? Number(b.maintainCycleDays) : undefined,
+  });
   res.status(201).json({ data: e });
 }));
 
